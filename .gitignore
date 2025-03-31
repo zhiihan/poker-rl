@@ -1,5 +1,7 @@
 __pycache__
 
-.venv
-
 *.ipynb
+
+wandb/
+runs/
+.DS_Store
