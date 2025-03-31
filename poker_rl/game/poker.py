@@ -35,8 +35,14 @@ class PokerGame:
 
         np.random.shuffle(self.cards)
 
-        self.community_cards = self.cards[-5:]
+        self.community_cards = self.cards[-5:].copy()
+        self.cards = self.cards[5:].copy()
+
         self.stage = [False, False, False]  # Flop, Turn, River
+
+        self.player_cards = []
+        for i in range(num_players):
+            self.player_cards.append(self.cards[i * 2 : i * 2 + 2])
 
     def shuffle_deck(self):
         np.random.shuffle(self.cards)
@@ -53,6 +59,13 @@ class PokerGame:
 
         This function should take the player's hand,
         combine it with the community cards, and output the Poker rank.
+
+        Args:
+            cards_list: A list of Cards possibly exceeding 5.
+
+        Returns:
+            rank: The rank of the cards.
+            best_hand: The best hand possible for the player.
         """
 
         disp_rank = {
