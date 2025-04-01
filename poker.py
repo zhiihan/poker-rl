@@ -7,6 +7,13 @@ import time
 import torch
 import random
 import numpy as np
+import supersuit as ss
+import gymnasium as gym
+from pettingzoo.classic import texas_holdem_no_limit_v6
+from pettingzoo.utils import save_observation
+from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
+import time
+from agents import QLearningAgent
 
 
 def parse_args():
@@ -38,13 +45,30 @@ def parse_args():
         "--cuda", default=True, type=lambda x: bool(strtobool(x)), nargs="?", const=True
     )
     parser.add_argument(
+        "--num_envs",
+        default=16,
+        type=int,
+        nargs="?",
+        const=True,
+        help="the number of environments to run in parallel",
+    )
+    parser.add_argument(
         "--track",
-        default=True,
+        default=False,
         type=lambda x: bool(strtobool(x)),
         nargs="?",
         const=True,
         help="use wandb to track the agents training progress for cloud implementations.",
     )
+    parser.add_argument(
+        "--capture-video",
+        type=lambda x: bool(strtobool(x)),
+        default=False,
+        nargs="?",
+        const=True,
+        help="whether to capture videos of the agent performances (check out `videos` folder)",
+    )
+
     args = parser.parse_args()
     return args
 
@@ -85,3 +109,32 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+
+    env = texas_holdem_no_limit_v6.env(num_players=2, render_mode="ansi")
+    env.reset(seed=42)
+
+    my_agents = [QLearningAgent(), QLearningAgent()]
+
+    for agent in env.agent_iter():
+        observation, reward, termination, truncation, info = env.last()
+
+        if termination or truncation:
+            action = None
+        else:
+            mask = observation["action_mask"]
+
+            if agent == "player_0":
+                action_array = my_agents[0].get_action_value(observation, mask)
+                print(f"Player 0 actions = {action_array}")
+            elif agent == "player_1":
+                action_array = my_agents[1].get_action_value(observation, mask)
+                print(f"Player 1 actions = {action_array}")
+
+            with torch.no_grad():
+                # print(observation, reward, termination, truncation, info)
+                action_array = torch.Tensor(mask) * action_array
+                action = int(torch.argmax(action_array))
+
+        env.step(action)
+    env.close()
+    writer.close()
